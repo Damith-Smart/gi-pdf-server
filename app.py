@@ -7,50 +7,55 @@ app = Flask(__name__)
 
 @app.route("/generate-pdf", methods=["POST"])
 def generate_pdf():
-    data = request.json
-    wb = load_workbook("gi_template.xlsx")
-    ws = wb.active
+    try:
+        data = request.json
+        wb = load_workbook("gi_template.xlsx")
+        ws = wb.active
 
-    # 🟢 Standard inputs
-    ws["E5"] = data.get("date", "")
-    ws["E6"] = data.get("blast_in_charge", "")
-    ws["E7"] = data.get("driller", "")
-    ws["E9"] = data.get("time", "")
-    ws["E10"] = data.get("material_type", "")
-    ws["E11"] = data.get("location", "")
+        # ✅ Standard inputs
+        ws["E5"] = data.get("date", "")
+        ws["E6"] = data.get("blast_in_charge", "")
+        ws["E7"] = data.get("driller", "")
+        ws["E9"] = data.get("time", "")
+        ws["E10"] = data.get("material_type", "")
+        ws["E11"] = data.get("location", "")
 
-    ws["E12"] = data.get("no_of_holes", 0)
-    ws["E13"] = data.get("hole_depth", 0.0)
-    ws["E14"] = data.get("sub_holes", 0)
-    ws["E15"] = data.get("sub_depth", 0.0)
+        ws["E12"] = data.get("no_of_holes", 0)
+        ws["E13"] = data.get("hole_depth", 0.0)
+        ws["E14"] = data.get("sub_holes", 0)
+        ws["E15"] = data.get("sub_depth", 0.0)
+        ws["E16"] = data.get("spacing", 0.0)
+        ws["E17"] = data.get("burden", 0.0)
+        ws["E18"] = data.get("density", 0.0)
 
-    ws["E16"] = data.get("spacing", 0.0)
-    ws["E17"] = data.get("burden", 0.0)
-    ws["E18"] = data.get("density", 0.0)
+        # ✅ Explosives (input in kg directly)
+        ws["L9"] = float(data.get("watergel_per_hole", 0.0))
+        ws["L10"] = float(data.get("watergel_per_sub_hole", 0.0))
+        ws["L31"] = float(data.get("ammonium_per_hole", 0.0))
+        ws["L32"] = float(data.get("ammonium_per_sub_hole", 0.0))
 
-    # 🟢 Explosives (input in kg directly)
-    ws["L9"] = data.get("watergel_per_hole", 0.0)
-    ws["L10"] = data.get("watergel_per_sub_hole", 0.0)
-    ws["L31"] = data.get("ammonium_per_hole", 0.0)
-    ws["L32"] = data.get("ammonium_per_sub_hole", 0.0)
+        # ✅ ED Pattern (L15–L24)
+        ed_pattern = data.get("ed_pattern", [0] * 10)
+        for i in range(min(10, len(ed_pattern))):
+            try:
+                ws[f"L{15+i}"] = int(ed_pattern[i])
+            except:
+                ws[f"L{15+i}"] = ""
 
-    # 🟢 ED Pattern - delay counts only
-    ed_pattern = data.get("ed_pattern", [0] * 10)
-    for i in range(min(10, len(ed_pattern))):
-        try:
-            ws[f"L{15+i}"] = int(ed_pattern[i])
-        except:
-            ws[f"L{15+i}"] = ""
+        # ✅ Save and return Excel file
+        output_file = "filled_gi_form.xlsx"
+        wb.save(output_file)
 
-    # 🔄 Save and return .xlsx (skip PDF)
-    filled_path = "filled_gi_form.xlsx"
-    wb.save(filled_path)
-    return send_file(
-        filled_path,
-        as_attachment=True,
-        download_name="filled_gi_form.xlsx",  # Force correct name
-        mimetype=
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return send_file(
+            output_file,
+            as_attachment=True,
+            download_name="filled_gi_form.xlsx",
+            mimetype=
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
+        return {"error": f"❌ Something went wrong: {str(e)}"}, 500
 
 
 if __name__ == "__main__":
