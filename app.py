@@ -45,7 +45,12 @@ def generate_pdf():
     # 🔄 Save and return .xlsx (skip PDF)
     filled_path = "filled_gi_form.xlsx"
     wb.save(filled_path)
-    return send_file(filled_path, as_attachment=True)
+    return send_file(
+        filled_path,
+        as_attachment=True,
+        download_name="filled_gi_form.xlsx",  # Force correct name
+        mimetype=
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 if __name__ == "__main__":
