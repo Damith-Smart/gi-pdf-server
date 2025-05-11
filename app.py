@@ -19,7 +19,7 @@ def generate_pdf():
     ws["E7"] = data.get("driller", "Kaveesha")
     ws["E9"] = data.get("time", "10.00 a.m")
     ws["E10"] = data.get("material_type", "High Grade")
-    ws["E111"] = data.get("location", "ISURU")
+    ws["E11"] = data.get("location", "ISURU")
 
     ws["E12"] = data.get("no_of_holes", 10)
     ws["E13"] = data.get("hole_depth", 10.3)
@@ -40,18 +40,10 @@ def generate_pdf():
 
     # Save Excel file
     filled_path = "filled_gi_form.xlsx"
-    pdf_path = "gi_form.pdf"
     wb.save(filled_path)
 
-    # Convert to PDF using LibreOffice (must be installed in Render)
-    os.system(
-        f"libreoffice --headless --convert-to pdf {filled_path} --outdir .")
-
-    # Return the file if generated
-    if os.path.exists(pdf_path):
-        return send_file(pdf_path, as_attachment=True)
-    else:
-        return {"error": "PDF generation failed"}, 500
+    # ✅ Skip PDF, return Excel
+    return send_file(filled_path, as_attachment=True)
 
 
 if __name__ == "__main__":
