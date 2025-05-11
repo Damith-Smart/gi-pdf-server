@@ -9,40 +9,54 @@ app = Flask(__name__)
 def generate_pdf():
     data = request.json
 
+    # Load Excel template
     wb = load_workbook("gi_template.xlsx")
     ws = wb.active
 
-    # ✅ Input Fields (let Excel do its calculations where formulas already exist)
+    # Fill basic user inputs (merged cells or plain values)
     ws["E5"] = data.get("date", "")
     ws["E6"] = data.get("blast_in_charge", "")
     ws["E7"] = data.get("driller", "")
     ws["E9"] = data.get("time", "")
     ws["E10"] = data.get("material_type", "")
     ws["E11"] = data.get("location", "")
-    ws["E12"] = data.get("no_of_holes", "")
-    ws["E13"] = data.get("hole_depth", "")
-    ws["E14"] = data.get("sub_holes", "")
-    ws["E15"] = data.get("sub_depth", "")
-    ws["E16"] = data.get("spacing", "")
-    ws["E17"] = data.get("burden", "")
-    ws["E18"] = data.get("density", "")
 
-    # ✅ Watergel per hole (convert cartridges to weight)
-    watergel_cartridges = int(data.get("watergel_per_hole", 12))
-    ws["L9"] = watergel_cartridges * 0.125
+    # Blasting design inputs
+    ws["E12"] = data.get("no_of_holes", 0)
+    ws["E13"] = data.get("hole_depth", 0.0)
+    ws["E14"] = data.get("sub_holes", 0)
+    ws["E15"] = data.get("sub_depth", 0.0)
+    ws["E16"] = data.get("spacing", 0.0)
+    ws["E17"] = data.get("burden", 0.0)
+    ws["E18"] = data.get("density", 0.0)
 
-    # ✅ Ammonium Nitrate per hole
-    ws["L29"] = data.get("ammonium_per_hole", "")
+    # ✅ Watergel per hole — convert from cartridges to kg (1 cartridge = 0.125 kg)
+    try:
+        cartridges = int(data.get("watergel_per_hole", 0))
+        ws["L11"] = cartridges * 0.125
+    except:
+        ws["L11"] = 0.0
 
-    # ✅ ED Pattern (input only counts, not label text)
-    ed_pattern = data.get("ed_pattern", [0] * 10)
-    for i in range(10):
-        ws[f"L{15 + i}"] = int(ed_pattern[i])  # just the integer
+    # ✅ Ammonium Nitrate per hole (kg) — only the per hole value
+    try:
+        ws["L28"] = float(data.get("ammonium_per_hole", 0))
+    except:
+        ws["L28"] = 0.0
 
-    # ✅ Save and Convert
+    # ✅ ED Pattern (delays) — must be integers only, no strings like "number 01: x"
+    ed_pattern = data.get("ed_pattern", [])
+    for i in range(min(10, len(ed_pattern))):
+        try:
+            ws[f"L{15+i}"] = int(ed_pattern[i])
+        except:
+            ws[f"L{15+i}"] = ""
+
+    # Save filled Excel
     filled_path = "filled_gi_form.xlsx"
     pdf_path = "gi_form.pdf"
     wb.save(filled_path)
+
+    # Convert to PDF using LibreOffice
     os.system(
         f"libreoffice --headless --convert-to pdf {filled_path} --outdir .")
 
