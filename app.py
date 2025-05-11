@@ -9,41 +9,47 @@ app = Flask(__name__)
 def generate_pdf():
     data = request.json
 
-    # Load the Excel template
     wb = load_workbook("gi_template.xlsx")
     ws = wb.active
 
-    # Fill Excel cells from request data
-    ws["E5"] = data.get("date", "2025-05-10")
-    ws["E6"] = data.get("blast_in_charge", "Millhas")
-    ws["E7"] = data.get("driller", "Kaveesha")
-    ws["E9"] = data.get("time", "10.00 a.m")
-    ws["E10"] = data.get("material_type", "High Grade")
-    ws["E11"] = data.get("location", "ISURU")
+    # ✅ Input Fields (let Excel do its calculations where formulas already exist)
+    ws["E5"] = data.get("date", "")
+    ws["E6"] = data.get("blast_in_charge", "")
+    ws["E7"] = data.get("driller", "")
+    ws["E9"] = data.get("time", "")
+    ws["E10"] = data.get("material_type", "")
+    ws["E11"] = data.get("location", "")
+    ws["E12"] = data.get("no_of_holes", "")
+    ws["E13"] = data.get("hole_depth", "")
+    ws["E14"] = data.get("sub_holes", "")
+    ws["E15"] = data.get("sub_depth", "")
+    ws["E16"] = data.get("spacing", "")
+    ws["E17"] = data.get("burden", "")
+    ws["E18"] = data.get("density", "")
 
-    ws["E12"] = data.get("no_of_holes", 10)
-    ws["E13"] = data.get("hole_depth", 10.3)
-    ws["E14"] = data.get("sub_holes", 10)
-    ws["E15"] = data.get("sub_depth", 10.3)
+    # ✅ Watergel per hole (convert cartridges to weight)
+    watergel_cartridges = int(data.get("watergel_per_hole", 12))
+    ws["L9"] = watergel_cartridges * 0.125
 
-    ws["E16"] = data.get("spacing", 2.8)
-    ws["E17"] = data.get("burden", 2.5)
-    ws["E18"] = data.get("density", 2.4)
+    # ✅ Ammonium Nitrate per hole
+    ws["L29"] = data.get("ammonium_per_hole", "")
 
-    ws["L9"] = data.get("watergel_per_hole", "12 cartridges")
-    ws["L29"] = data.get("ammonium_per_hole", "20 kg")
-
-    # Handle ED Pattern List
-    ed_pattern = data.get("ed_pattern", ["0"] * 10)
+    # ✅ ED Pattern (input only counts, not label text)
+    ed_pattern = data.get("ed_pattern", [0] * 10)
     for i in range(10):
-        ws[f"L{15 + i}"] = f"ED number {i:02d}: {ed_pattern[i]}"
+        ws[f"L{15 + i}"] = int(ed_pattern[i])  # just the integer
 
-    # Save Excel file
+    # ✅ Save and Convert
     filled_path = "filled_gi_form.xlsx"
+    pdf_path = "gi_form.pdf"
     wb.save(filled_path)
+    os.system(
+        f"libreoffice --headless --convert-to pdf {filled_path} --outdir .")
 
-    # ✅ Skip PDF, return Excel
-    return send_file(filled_path, as_attachment=True)
+    if os.path.exists(pdf_path):
+        return send_file(pdf_path, as_attachment=True)
+    else:
+        return {"error": "PDF generation failed"}, 500
 
 
 if __name__ == "__main__":
